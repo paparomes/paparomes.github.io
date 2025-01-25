@@ -15,7 +15,7 @@ const projects = [
 
 const Projects = () => {
   return (
-    <section className="py-20 bg-white">
+    <section className="py-20 bg-navy-surface">
       <div className="container max-w-6xl">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
