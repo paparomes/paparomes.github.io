@@ -30,7 +30,7 @@ const Hero = () => {
           >
             <div className="w-80 h-96 md:w-96 md:h-[28rem] rounded-2xl bg-gray-200 border-4 border-white shadow-lg overflow-hidden">
               <img 
-                src="/lovable-uploads/45ef16fd-29c4-443f-9fed-648f4702ff39.png"
+                src="/lovable-uploads/c9b7f8a8-0ffc-4b40-bc73-82469c9f8073.png"
                 alt="Professional headshot"
                 className="w-full h-full object-cover object-top"
               />
