@@ -22,14 +22,14 @@ const Companies = () => {
   return (
     <section className="py-20 bg-white">
       <div className="container max-w-6xl">
-        <motion.p
+        <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-xl text-navy text-center mb-12"
+          className="text-3xl md:text-4xl font-bold text-navy text-center mb-12"
         >
           Companies I've worked for
-        </motion.p>
+        </motion.h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {companies.map((company, index) => (
