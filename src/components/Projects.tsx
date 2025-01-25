@@ -15,7 +15,7 @@ const projects = [
 
 const Projects = () => {
   return (
-    <section className="py-20 bg-navy-surface">
+    <section className="py-20 bg-white">
       <div className="container max-w-6xl">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
@@ -42,7 +42,7 @@ const Projects = () => {
                   {project.status}
                 </span>
               </div>
-              <p className="text-navy-light mb-4">{project.description}</p>
+              <p className="text-gray-700 mb-4">{project.description}</p>
               <button className="text-cerulean hover:text-cerulean-dark font-semibold transition-colors duration-300">
                 Learn More →
               </button>

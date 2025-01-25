@@ -1,19 +1,13 @@
-import { useEffect } from "react";
-import Hero from "../components/Hero";
-import Journey from "../components/Journey";
-import Projects from "../components/Projects";
-import Services from "../components/Services";
-import { motion, useAnimation } from "framer-motion";
+import Hero from "@/components/Hero";
+import Companies from "@/components/Companies";
+import Projects from "@/components/Projects";
 
-const Index = () => {
+export default function Index() {
   return (
-    <div className="min-h-screen bg-white">
+    <main className="min-h-screen font-inter">
       <Hero />
-      <Journey />
+      <Companies />
       <Projects />
-      <Services />
-    </div>
+    </main>
   );
-};
-
-export default Index;
+}
