@@ -28,7 +28,7 @@ const Hero = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="flex justify-center md:justify-end"
           >
-            <div className="w-64 h-64 md:w-80 md:h-80 rounded-full bg-gray-200 border-4 border-white shadow-lg">
+            <div className="w-80 h-80 md:w-96 md:h-96 rounded-full bg-gray-200 border-4 border-white shadow-lg">
               {/* Placeholder for headshot */}
             </div>
           </motion.div>
