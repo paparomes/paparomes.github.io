@@ -39,7 +39,7 @@ const Companies = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white p-8 rounded-lg shadow-sm flex items-center justify-center"
+              className="flex items-center justify-center"
             >
               <img 
                 src={company.logo} 
