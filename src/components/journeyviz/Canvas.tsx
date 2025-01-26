@@ -15,7 +15,7 @@ interface ColumnData {
   columnIndex: number;
 }
 
-// Define a custom type that extends Rect
+// Define a custom interface that extends Rect
 interface ColumnOverlay extends Rect {
   data?: ColumnData;
 }
@@ -69,8 +69,8 @@ export const Canvas = () => {
           evented: false,
         }) as ColumnOverlay;
 
-        // Set the data property using the set method
-        overlay.set({ data: { columnIndex: index } });
+        // Add the data property using the set method
+        overlay.set('data', { columnIndex: index });
         canvas.add(overlay);
       });
 
