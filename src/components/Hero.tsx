@@ -2,6 +2,11 @@ import { motion } from "framer-motion";
 import { Button } from "./ui/button";
 
 const Hero = () => {
+  const scrollToContact = () => {
+    const contactSection = document.getElementById('contact');
+    contactSection?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <section className="min-h-[80vh] flex items-center bg-navy-surface p-4 md:p-8">
       <div className="container max-w-6xl">
@@ -17,6 +22,7 @@ const Hero = () => {
             </h1>
             <Button 
               className="bg-cerulean hover:bg-cerulean-dark text-white font-semibold px-8 py-6 text-lg"
+              onClick={scrollToContact}
             >
               Get in touch
             </Button>

@@ -1,6 +1,7 @@
 import Hero from "@/components/Hero";
 import Companies from "@/components/Companies";
 import Projects from "@/components/Projects";
+import ContactForm from "@/components/ContactForm";
 
 export default function Index() {
   return (
@@ -8,6 +9,7 @@ export default function Index() {
       <Hero />
       <Companies />
       <Projects />
+      <ContactForm />
     </main>
   );
 }
