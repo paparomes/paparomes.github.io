@@ -35,7 +35,7 @@ export const Canvas = () => {
       const headerHeight = 60;
       const padding = 20;
 
-      // Draw vertical grid lines
+      // Draw vertical grid lines and column overlays
       stages.forEach((_, index) => {
         if (index > 0) {
           const line = new Line([columnWidth * index, 0, columnWidth * index, height], {
@@ -46,6 +46,20 @@ export const Canvas = () => {
           });
           canvas.add(line);
         }
+
+        // Add invisible column overlay for snapping highlight
+        const overlay = new Rect({
+          left: columnWidth * index,
+          top: headerHeight,
+          width: columnWidth,
+          height: height - headerHeight,
+          fill: "#1A365D",
+          opacity: 0,
+          selectable: false,
+          evented: false,
+          id: `column-${index}`,
+        });
+        canvas.add(overlay);
       });
 
       // Draw header separator line
@@ -79,7 +93,7 @@ export const Canvas = () => {
       const cardWidth = 160;
       const cardHeight = 80;
       
-      // Create card background
+      // Create card background with initial scale
       const background = new Rect({
         width: cardWidth,
         height: cardHeight,
@@ -93,7 +107,9 @@ export const Canvas = () => {
           offsetY: 2
         }),
         strokeWidth: 1,
-        stroke: '#E2E8F0'
+        stroke: '#E2E8F0',
+        scaleX: 0,
+        scaleY: 0
       });
 
       // Create type label
@@ -119,14 +135,25 @@ export const Canvas = () => {
         left,
         top,
         subTargetCheck: true,
-        hasControls: false
+        hasControls: false,
+        scaleX: 0,
+        scaleY: 0
+      });
+
+      // Add entrance animation
+      group.animate({
+        scaleX: 1,
+        scaleY: 1
+      }, {
+        duration: 200,
+        easing: fabric.util.ease.easeOutCubic
       });
 
       // Add hover effect
       group.on('mouseover', () => {
         background.set('shadow', new Shadow({
-          color: 'rgba(0,0,0,0.1)',
-          blur: 6,
+          color: 'rgba(0,0,0,0.15)',
+          blur: 8,
           offsetX: 0,
           offsetY: 4
         }));
@@ -145,13 +172,71 @@ export const Canvas = () => {
         canvas.renderAll();
       });
 
+      // Add dragging behavior
+      group.on('moving', (e) => {
+        const width = canvas.width || 0;
+        const columnWidth = width / stages.length;
+        const headerHeight = 60;
+        
+        // Vertical bounds
+        const top = group.top || 0;
+        if (top < headerHeight) {
+          group.set('top', headerHeight);
+        } else if (top + cardHeight > canvas.height!) {
+          group.set('top', canvas.height! - cardHeight);
+        }
+
+        // Column snapping and highlighting
+        const groupCenterX = (group.left || 0) + (cardWidth / 2);
+        const columnIndex = Math.floor(groupCenterX / columnWidth);
+        const targetColumnCenter = (columnIndex * columnWidth) + (columnWidth / 2);
+
+        // Snap to column center
+        if (Math.abs(groupCenterX - targetColumnCenter) < 50) {
+          group.set('left', targetColumnCenter - (cardWidth / 2));
+        }
+
+        // Update column overlays
+        canvas.getObjects().forEach(obj => {
+          if (obj.id?.toString().startsWith('column-')) {
+            const isTargetColumn = obj.id === `column-${columnIndex}`;
+            obj.set('opacity', isTargetColumn ? 0.05 : 0);
+          }
+        });
+
+        canvas.renderAll();
+      });
+
+      // Reset column overlays after drag
+      group.on('moved', () => {
+        canvas.getObjects().forEach(obj => {
+          if (obj.id?.toString().startsWith('column-')) {
+            obj.set('opacity', 0);
+          }
+        });
+        canvas.renderAll();
+      });
+
       // Handle delete button click
       deleteBtn.on('mousedown', (options: TPointerEventInfo<TPointerEvent>) => {
         if (options.e) {
           options.e.stopPropagation();
         }
-        canvas.remove(group);
-        canvas.renderAll();
+        
+        // Exit animation
+        group.animate({
+          scaleX: 0,
+          scaleY: 0,
+          opacity: 0
+        }, {
+          duration: 200,
+          easing: fabric.util.ease.easeInCubic,
+          onChange: canvas.renderAll.bind(canvas),
+          onComplete: () => {
+            canvas.remove(group);
+            canvas.renderAll();
+          }
+        });
       });
 
       canvas.add(group);
@@ -171,7 +256,15 @@ export const Canvas = () => {
       createTouchpointCard(type, x, y);
     };
 
-    canvas.getElement().addEventListener('dragover', (e) => e.preventDefault());
+    canvas.getElement().addEventListener('dragover', (e) => {
+      e.preventDefault();
+      canvas.getElement().style.cursor = 'copy';
+    });
+    
+    canvas.getElement().addEventListener('dragleave', () => {
+      canvas.getElement().style.cursor = 'default';
+    });
+    
     canvas.getElement().addEventListener('drop', handleDrop);
 
     drawTimelineGrid();
