@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Canvas as FabricCanvas, Line, Text, Group, Rect, TEvent, Shadow, TPointerEvent, TPointerEventInfo } from "fabric";
+import { Canvas as FabricCanvas, Line, Text, Group, Rect, TPointerEventInfo, TPointerEvent, Shadow, util } from "fabric";
 import { supabase } from "@/integrations/supabase/client";
 
 type TouchpointCard = {
@@ -57,7 +57,7 @@ export const Canvas = () => {
           opacity: 0,
           selectable: false,
           evented: false,
-          id: `column-${index}`,
+          data: { columnIndex: index },
         });
         canvas.add(overlay);
       });
@@ -146,7 +146,7 @@ export const Canvas = () => {
         scaleY: 1
       }, {
         duration: 200,
-        easing: fabric.util.ease.easeOutCubic
+        easing: util.ease.easeOutCubic
       });
 
       // Add hover effect
@@ -173,7 +173,7 @@ export const Canvas = () => {
       });
 
       // Add dragging behavior
-      group.on('moving', (e) => {
+      group.on('moving', () => {
         const width = canvas.width || 0;
         const columnWidth = width / stages.length;
         const headerHeight = 60;
@@ -198,8 +198,8 @@ export const Canvas = () => {
 
         // Update column overlays
         canvas.getObjects().forEach(obj => {
-          if (obj.id?.toString().startsWith('column-')) {
-            const isTargetColumn = obj.id === `column-${columnIndex}`;
+          if (obj instanceof Rect && obj.data?.columnIndex !== undefined) {
+            const isTargetColumn = obj.data.columnIndex === columnIndex;
             obj.set('opacity', isTargetColumn ? 0.05 : 0);
           }
         });
@@ -208,9 +208,9 @@ export const Canvas = () => {
       });
 
       // Reset column overlays after drag
-      group.on('moved', () => {
+      group.on('modified', () => {
         canvas.getObjects().forEach(obj => {
-          if (obj.id?.toString().startsWith('column-')) {
+          if (obj instanceof Rect && obj.data?.columnIndex !== undefined) {
             obj.set('opacity', 0);
           }
         });
@@ -230,7 +230,7 @@ export const Canvas = () => {
           opacity: 0
         }, {
           duration: 200,
-          easing: fabric.util.ease.easeInCubic,
+          easing: util.ease.easeInCubic,
           onChange: canvas.renderAll.bind(canvas),
           onComplete: () => {
             canvas.remove(group);
