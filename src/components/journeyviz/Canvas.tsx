@@ -17,7 +17,7 @@ interface ColumnData {
 
 // Define a custom interface that extends Rect
 interface ColumnOverlay extends Rect {
-  data?: ColumnData;
+  data: ColumnData;
 }
 
 export const Canvas = () => {
@@ -67,14 +67,12 @@ export const Canvas = () => {
           opacity: 0,
           selectable: false,
           evented: false,
+          data: { columnIndex: index }
         }) as ColumnOverlay;
 
-        // Add the data property using the set method
-        overlay.set('data', { columnIndex: index });
         canvas.add(overlay);
       });
 
-      // Draw header separator line
       const headerLine = new Line([0, headerHeight, width, headerHeight], {
         stroke: "#1A365D",
         opacity: 0.2,
