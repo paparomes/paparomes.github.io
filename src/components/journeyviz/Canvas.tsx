@@ -106,26 +106,17 @@ export const Canvas = () => {
 
       canvas.renderAll();
     };
+
     const createTouchpointCard = (type: string, left: number, top: number) => {
       const cardWidth = 160;
       const cardHeight = 80;
       const width = canvas.width || 0;
       const columnWidth = width / stages.length;
       
-      // Find nearest column center
-      const columnIndex = Math.min(
-        stages.length - 1,
-        Math.max(0, Math.round(left / columnWidth))
-      );
-      const columnCenterX = (columnIndex * columnWidth) + (columnWidth / 2);
-      const snappedLeft = columnCenterX - (cardWidth / 2);
+      // Calculate initial column position
+      const columnIndex = Math.floor(left / columnWidth);
+      const snappedLeft = (columnIndex * columnWidth) + (columnWidth / 2) - (cardWidth / 2);
       
-      // Constrain vertical position
-      const snappedTop = Math.max(
-        headerHeight + 10,
-        Math.min(top, (canvas.height || 0) - cardHeight - 10)
-      );
-    
       // Create card background with initial scale
       const background = new Rect({
         width: cardWidth,
@@ -164,7 +155,7 @@ export const Canvas = () => {
       // Group all elements
       const group = new Group([background, label, deleteBtn], {
         left: snappedLeft,
-        top: snappedTop,  // Use the calculated snappedTop here
+        top: Math.max(headerHeight, top),
         subTargetCheck: true,
         hasControls: false,
         scaleX: 0,
