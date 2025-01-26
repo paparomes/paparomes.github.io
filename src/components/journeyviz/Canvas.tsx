@@ -1,25 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Canvas as FabricCanvas, Line, Text, Group, Rect, TPointerEventInfo, TPointerEvent, Shadow, util, RectProps } from "fabric";
-
-// Define interfaces and types
-interface ColumnData {
-  columnIndex: number;
-}
-
-// Extend RectProps for our custom properties
-interface CustomRectProps extends RectProps {
-  data?: ColumnData;
-}
-
-// Create a custom class that extends Rect
-class CustomRect extends Rect {
-  data?: ColumnData;
-  
-  constructor(options: Partial<RectProps> & { data?: ColumnData }) {
-    super(options);
-    this.data = options.data;
-  }
-}
+import { Canvas as FabricCanvas, Line, Text, Group, Rect, TPointerEventInfo, TPointerEvent, Shadow, util } from "fabric";
+import { supabase } from "@/integrations/supabase/client";
 
 type TouchpointCard = {
   id: string;
@@ -29,10 +10,20 @@ type TouchpointCard = {
   top: number;
 };
 
+// Define a custom interface for the column overlay data
+interface ColumnData {
+  columnIndex: number;
+}
+
+// Define a custom type that includes our data property
+type CustomRect = Rect & {
+  data?: ColumnData;
+};
+
 export const Canvas = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<FabricCanvas>();
-  const headerHeight = 60;
+
   const stages = ["Awareness", "Consideration", "Decision"];
 
   useEffect(() => {
@@ -51,6 +42,7 @@ export const Canvas = () => {
       const width = canvas.width || 0;
       const height = canvas.height || 0;
       const columnWidth = width / stages.length;
+      const headerHeight = 60;
       const padding = 20;
 
       // Draw vertical grid lines and column overlays
@@ -66,18 +58,19 @@ export const Canvas = () => {
         }
 
         // Add invisible column overlay for snapping highlight
-        const overlay = new CustomRect({
-          top: headerHeight,
+        const overlay = new Rect({
           left: columnWidth * index,
+          top: headerHeight,
           width: columnWidth,
           height: height - headerHeight,
           fill: "#1A365D",
           opacity: 0,
           selectable: false,
           evented: false,
-          data: { columnIndex: index }
-        });
+        }) as CustomRect;
 
+        // Set the data property after creation
+        overlay.data = { columnIndex: index };
         canvas.add(overlay);
       });
 
@@ -103,29 +96,12 @@ export const Canvas = () => {
         });
         canvas.add(text);
       });
-
-      canvas.renderAll();
     };
+
     const createTouchpointCard = (type: string, left: number, top: number) => {
       const cardWidth = 160;
       const cardHeight = 80;
-      const width = canvas.width || 0;
-      const columnWidth = width / stages.length;
       
-      // Find nearest column center
-      const columnIndex = Math.min(
-        stages.length - 1,
-        Math.max(0, Math.round(left / columnWidth))
-      );
-      const columnCenterX = (columnIndex * columnWidth) + (columnWidth / 2);
-      const snappedLeft = columnCenterX - (cardWidth / 2);
-      
-      // Constrain vertical position
-      const snappedTop = Math.max(
-        headerHeight + 10,
-        Math.min(top, (canvas.height || 0) - cardHeight - 10)
-      );
-    
       // Create card background with initial scale
       const background = new Rect({
         width: cardWidth,
@@ -141,6 +117,8 @@ export const Canvas = () => {
         }),
         strokeWidth: 1,
         stroke: '#E2E8F0',
+        scaleX: 0,
+        scaleY: 0
       });
 
       // Create type label
@@ -163,8 +141,8 @@ export const Canvas = () => {
 
       // Group all elements
       const group = new Group([background, label, deleteBtn], {
-        left: snappedLeft,
-        top: snappedTop,  // Use the calculated snappedTop here
+        left,
+        top,
         subTargetCheck: true,
         hasControls: false,
         scaleX: 0,
@@ -177,35 +155,47 @@ export const Canvas = () => {
         scaleY: 1
       }, {
         duration: 200,
-        easing: util.ease.easeOutCubic,
-        onChange: canvas.renderAll.bind(canvas)
+        easing: util.ease.easeOutCubic
       });
 
       // Add hover effect
-      const updateShadow = (isHover: boolean) => {
+      group.on('mouseover', () => {
         background.set('shadow', new Shadow({
-          color: isHover ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.1)',
-          blur: isHover ? 8 : 4,
+          color: 'rgba(0,0,0,0.15)',
+          blur: 8,
           offsetX: 0,
-          offsetY: isHover ? 4 : 2
+          offsetY: 4
         }));
-        deleteBtn.set('fill', isHover ? '#64748B' : '#94A3B8');
+        deleteBtn.set('fill', '#64748B');
         canvas.renderAll();
-      };
+      });
 
-      group.on('mouseover', () => updateShadow(true));
-      group.on('mouseout', () => updateShadow(false));
+      group.on('mouseout', () => {
+        background.set('shadow', new Shadow({
+          color: 'rgba(0,0,0,0.1)',
+          blur: 4,
+          offsetX: 0,
+          offsetY: 2
+        }));
+        deleteBtn.set('fill', '#94A3B8');
+        canvas.renderAll();
+      });
 
       // Add dragging behavior
-      const updateColumnHighlight = (columnIndex: number) => {
-        canvas.getObjects().forEach(obj => {
-          if (obj instanceof CustomRect && obj.data?.columnIndex !== undefined) {
-            obj.set('opacity', obj.data.columnIndex === columnIndex ? 0.05 : 0);
-          }
-        });
-      };
-
       group.on('moving', () => {
+        const width = canvas.width || 0;
+        const columnWidth = width / stages.length;
+        const headerHeight = 60;
+        
+        // Vertical bounds
+        const top = group.top || 0;
+        if (top < headerHeight) {
+          group.set('top', headerHeight);
+        } else if (top + cardHeight > canvas.height!) {
+          group.set('top', canvas.height! - cardHeight);
+        }
+
+        // Column snapping and highlighting
         const groupCenterX = (group.left || 0) + (cardWidth / 2);
         const columnIndex = Math.floor(groupCenterX / columnWidth);
         const targetColumnCenter = (columnIndex * columnWidth) + (columnWidth / 2);
@@ -215,20 +205,25 @@ export const Canvas = () => {
           group.set('left', targetColumnCenter - (cardWidth / 2));
         }
 
-        // Constrain vertical movement
-        const currentTop = group.top || 0;
-        group.set('top', Math.max(
-          headerHeight,
-          Math.min(currentTop, (canvas.height || 0) - cardHeight)
-        ));
+        // Update column overlays
+        canvas.getObjects().forEach(obj => {
+          if (obj instanceof Rect && obj.data?.columnIndex !== undefined) {
+            const isTargetColumn = obj.data.columnIndex === columnIndex;
+            obj.set('opacity', isTargetColumn ? 0.05 : 0);
+          }
+        });
 
-        updateColumnHighlight(columnIndex);
         canvas.renderAll();
       });
 
       // Reset column overlays after drag
       group.on('modified', () => {
-        updateColumnHighlight(-1);
+        canvas.getObjects().forEach(obj => {
+          if (obj instanceof Rect && obj.data?.columnIndex !== undefined) {
+            obj.set('opacity', 0);
+          }
+        });
+        canvas.renderAll();
       });
 
       // Handle delete button click
@@ -237,6 +232,7 @@ export const Canvas = () => {
           options.e.stopPropagation();
         }
         
+        // Exit animation
         group.animate({
           scaleX: 0,
           scaleY: 0,
@@ -256,20 +252,9 @@ export const Canvas = () => {
       canvas.renderAll();
     };
 
-    // Event handlers
-    const handleDragOver = (e: DragEvent) => {
-      e.preventDefault();
-      canvas.getElement().style.cursor = 'copy';
-    };
-
-    const handleDragLeave = () => {
-      canvas.getElement().style.cursor = 'default';
-    };
-
+    // Handle dropped touchpoints
     const handleDrop = (e: DragEvent) => {
       e.preventDefault();
-      canvas.getElement().style.cursor = 'default';
-      
       const type = e.dataTransfer?.getData('text/plain');
       if (!type) return;
 
@@ -280,8 +265,15 @@ export const Canvas = () => {
       createTouchpointCard(type, x, y);
     };
 
-    canvas.getElement().addEventListener('dragover', handleDragOver);
-    canvas.getElement().addEventListener('dragleave', handleDragLeave);
+    canvas.getElement().addEventListener('dragover', (e) => {
+      e.preventDefault();
+      canvas.getElement().style.cursor = 'copy';
+    });
+    
+    canvas.getElement().addEventListener('dragleave', () => {
+      canvas.getElement().style.cursor = 'default';
+    });
+    
     canvas.getElement().addEventListener('drop', handleDrop);
 
     drawTimelineGrid();
@@ -300,10 +292,8 @@ export const Canvas = () => {
 
     return () => {
       window.removeEventListener("resize", handleResize);
-      const element = canvas.getElement();
-      element.removeEventListener('dragover', handleDragOver);
-      element.removeEventListener('dragleave', handleDragLeave);
-      element.removeEventListener('drop', handleDrop);
+      canvas.getElement().removeEventListener('dragover', (e) => e.preventDefault());
+      canvas.getElement().removeEventListener('drop', handleDrop);
       canvas.dispose();
     };
   }, []);
