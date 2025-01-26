@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Canvas as FabricCanvas, Line, Text, Group, Rect, IEvent } from "fabric";
+import { Canvas as FabricCanvas, Line, Text, Group, Rect, TEvent, Shadow } from "fabric";
 import { supabase } from "@/integrations/supabase/client";
 
 type TouchpointCard = {
@@ -86,7 +86,12 @@ export const Canvas = () => {
         fill: 'white',
         rx: 8,
         ry: 8,
-        shadow: '0 2px 4px rgba(0,0,0,0.1)',
+        shadow: new Shadow({
+          color: 'rgba(0,0,0,0.1)',
+          blur: 4,
+          offsetX: 0,
+          offsetY: 2
+        }),
         strokeWidth: 1,
         stroke: '#E2E8F0'
       });
@@ -119,19 +124,29 @@ export const Canvas = () => {
 
       // Add hover effect
       group.on('mouseover', () => {
-        background.set('shadow', '0 4px 6px rgba(0,0,0,0.1)');
+        background.set('shadow', new Shadow({
+          color: 'rgba(0,0,0,0.1)',
+          blur: 6,
+          offsetX: 0,
+          offsetY: 4
+        }));
         deleteBtn.set('fill', '#64748B');
         canvas.renderAll();
       });
 
       group.on('mouseout', () => {
-        background.set('shadow', '0 2px 4px rgba(0,0,0,0.1)');
+        background.set('shadow', new Shadow({
+          color: 'rgba(0,0,0,0.1)',
+          blur: 4,
+          offsetX: 0,
+          offsetY: 2
+        }));
         deleteBtn.set('fill', '#94A3B8');
         canvas.renderAll();
       });
 
       // Handle delete button click
-      deleteBtn.on('mousedown', (e: IEvent) => {
+      deleteBtn.on('mousedown', (e: TEvent) => {
         e.stopPropagation();
         canvas.remove(group);
         canvas.renderAll();
