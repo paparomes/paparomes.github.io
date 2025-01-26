@@ -10,6 +10,11 @@ type TouchpointCard = {
   top: number;
 };
 
+// Define the type for our column overlay data
+type ColumnOverlayData = {
+  columnIndex: number;
+};
+
 export const Canvas = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<FabricCanvas>();
@@ -57,8 +62,9 @@ export const Canvas = () => {
           opacity: 0,
           selectable: false,
           evented: false,
-          data: { columnIndex: index },
-        });
+        }) as Rect & { data: ColumnOverlayData };
+        
+        overlay.data = { columnIndex: index };
         canvas.add(overlay);
       });
 
