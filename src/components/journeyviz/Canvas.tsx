@@ -11,11 +11,11 @@ type TouchpointCard = {
 };
 
 // Define a custom type that extends Rect to include our data property
-type ColumnOverlay = Rect & {
+interface ColumnOverlay extends Rect {
   data?: {
     columnIndex: number;
   };
-};
+}
 
 export const Canvas = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -65,8 +65,9 @@ export const Canvas = () => {
           selectable: false,
           evented: false,
         }) as ColumnOverlay;
-        
-        overlay.data = { columnIndex: index };
+
+        // Set the data property after creation
+        overlay.set('data', { columnIndex: index });
         canvas.add(overlay);
       });
 
