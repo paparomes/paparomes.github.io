@@ -10,11 +10,14 @@ type TouchpointCard = {
   top: number;
 };
 
-// Define a custom type that extends Rect to include our data property
+// Define a custom interface for the column overlay data
+interface ColumnData {
+  columnIndex: number;
+}
+
+// Define a custom type that extends Rect
 interface ColumnOverlay extends Rect {
-  data?: {
-    columnIndex: number;
-  };
+  data?: ColumnData;
 }
 
 export const Canvas = () => {
@@ -66,8 +69,8 @@ export const Canvas = () => {
           evented: false,
         }) as ColumnOverlay;
 
-        // Set the data property after creation
-        overlay.set('data', { columnIndex: index });
+        // Set the data property using the set method
+        overlay.set({ data: { columnIndex: index } });
         canvas.add(overlay);
       });
 
@@ -94,8 +97,6 @@ export const Canvas = () => {
         });
         canvas.add(text);
       });
-
-      canvas.renderAll();
     };
 
     const createTouchpointCard = (type: string, left: number, top: number) => {
