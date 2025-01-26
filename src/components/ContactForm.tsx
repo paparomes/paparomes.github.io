@@ -74,7 +74,7 @@ const ContactForm = () => {
   return (
     <section id="contact" className="bg-white py-16">
       <div className="container max-w-4xl mx-auto px-4">
-        <h2 className="text-3xl font-bold text-navy mb-8 text-center">Get in Touch</h2>
+        <h2 className="text-3xl font-bold text-navy mb-8 text-center">Get in touch</h2>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
