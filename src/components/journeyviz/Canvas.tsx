@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Canvas as FabricCanvas, Line, Text, Group, Rect, TEvent, Shadow, TPointerEvent } from "fabric";
+import { Canvas as FabricCanvas, Line, Text, Group, Rect, TEvent, Shadow, TPointerEvent, TPointerEventInfo } from "fabric";
 import { supabase } from "@/integrations/supabase/client";
 
 type TouchpointCard = {
@@ -146,9 +146,9 @@ export const Canvas = () => {
       });
 
       // Handle delete button click
-      deleteBtn.on('mousedown', (e: TEvent<MouseEvent>) => {
-        if (e.e) {
-          e.e.stopPropagation();
+      deleteBtn.on('mousedown', (options: TPointerEventInfo<TPointerEvent>) => {
+        if (options.e) {
+          options.e.stopPropagation();
         }
         canvas.remove(group);
         canvas.renderAll();
