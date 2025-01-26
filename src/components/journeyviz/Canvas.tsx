@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Canvas as FabricCanvas, Line, Text, Group, Rect, TEvent, Shadow, TPointerEvent, TPointerEventInfo } from "fabric";
-import { supabase } from "@/integrations/supabase/client";
+import { Canvas as FabricCanvas, Line, Text, Group, Rect, Shadow } from "fabric";
 
 type TouchpointCard = {
   id: string;
@@ -15,6 +14,23 @@ export const Canvas = () => {
   const fabricRef = useRef<FabricCanvas>();
 
   const stages = ["Awareness", "Consideration", "Decision"];
+  const headerHeight = 60;
+
+  const getColumnBoundaries = (canvas: FabricCanvas) => {
+    const width = canvas.width || 0;
+    const columnWidth = width / stages.length;
+    
+    return stages.map((_, index) => ({
+      start: columnWidth * index,
+      end: columnWidth * (index + 1),
+      center: columnWidth * index + (columnWidth / 2),
+      width: columnWidth
+    }));
+  };
+
+  const findClosestColumn = (x: number, boundaries: Array<{start: number, end: number, center: number}>) => {
+    return boundaries.findIndex(({start, end}) => x >= start && x <= end);
+  };
 
   useEffect(() => {
     if (!canvasRef.current || fabricRef.current) return;
@@ -32,7 +48,6 @@ export const Canvas = () => {
       const width = canvas.width || 0;
       const height = canvas.height || 0;
       const columnWidth = width / stages.length;
-      const headerHeight = 60;
       const padding = 20;
 
       // Draw vertical grid lines
@@ -78,6 +93,14 @@ export const Canvas = () => {
     const createTouchpointCard = (type: string, left: number, top: number) => {
       const cardWidth = 160;
       const cardHeight = 80;
+      const padding = 12;
+      
+      // Get column boundaries and snap position
+      const boundaries = getColumnBoundaries(canvas);
+      const columnIndex = findClosestColumn(left, boundaries);
+      const column = boundaries[columnIndex];
+      const snappedLeft = column.center - (cardWidth / 2);
+      const adjustedTop = Math.max(headerHeight + padding, top);
       
       // Create card background
       const background = new Rect({
@@ -93,13 +116,15 @@ export const Canvas = () => {
           offsetY: 2
         }),
         strokeWidth: 1,
-        stroke: '#E2E8F0'
+        stroke: '#E2E8F0',
+        scaleX: 0.9,
+        scaleY: 0.9
       });
 
       // Create type label
       const label = new Text(type, {
-        left: 12,
-        top: 12,
+        left: padding,
+        top: padding,
         fontFamily: 'Inter',
         fontSize: 14,
         fill: '#1A365D'
@@ -111,22 +136,56 @@ export const Canvas = () => {
         top: 8,
         fontSize: 20,
         fill: '#94A3B8',
-        fontFamily: 'Inter'
+        fontFamily: 'Inter',
+        selectable: false
       });
 
       // Group all elements
       const group = new Group([background, label, deleteBtn], {
-        left,
-        top,
+        left: snappedLeft,
+        top: adjustedTop,
         subTargetCheck: true,
-        hasControls: false
+        hasControls: false,
+        scaleX: 0.9,
+        scaleY: 0.9
+      });
+
+      // Add movement constraints
+      group.on('moving', (e) => {
+        const obj = e.target;
+        const boundaries = getColumnBoundaries(canvas);
+        const columnIndex = findClosestColumn(obj.left! + (cardWidth / 2), boundaries);
+        
+        if (columnIndex !== -1) {
+          const column = boundaries[columnIndex];
+          obj.set({
+            left: column.center - (cardWidth / 2)
+          });
+        }
+
+        // Constrain vertical movement
+        const minTop = headerHeight + padding;
+        const maxTop = canvas.height! - cardHeight - padding;
+        obj.set({
+          top: Math.min(Math.max(obj.top!, minTop), maxTop)
+        });
+      });
+
+      // Add entrance animation
+      group.animate({
+        scaleX: 1,
+        scaleY: 1
+      }, {
+        duration: 200,
+        easing: fabric.util.ease.easeOutCubic,
+        onChange: canvas.renderAll.bind(canvas)
       });
 
       // Add hover effect
       group.on('mouseover', () => {
         background.set('shadow', new Shadow({
-          color: 'rgba(0,0,0,0.1)',
-          blur: 6,
+          color: 'rgba(0,0,0,0.15)',
+          blur: 8,
           offsetX: 0,
           offsetY: 4
         }));
@@ -146,21 +205,81 @@ export const Canvas = () => {
       });
 
       // Handle delete button click
-      deleteBtn.on('mousedown', (options: TPointerEventInfo<TPointerEvent>) => {
+      deleteBtn.on('mousedown', (options) => {
         if (options.e) {
           options.e.stopPropagation();
         }
-        canvas.remove(group);
-        canvas.renderAll();
+        group.animate({
+          scaleX: 0,
+          scaleY: 0,
+          opacity: 0
+        }, {
+          duration: 200,
+          onChange: canvas.renderAll.bind(canvas),
+          onComplete: () => {
+            canvas.remove(group);
+            canvas.renderAll();
+          }
+        });
       });
 
       canvas.add(group);
       canvas.renderAll();
     };
 
-    // Handle dropped touchpoints
+    let highlightRect: Rect | null = null;
+
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      canvas.getElement().style.cursor = 'copy';
+
+      const rect = canvas.getElement().getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      
+      const boundaries = getColumnBoundaries(canvas);
+      const columnIndex = findClosestColumn(x, boundaries);
+      
+      if (columnIndex !== -1) {
+        const column = boundaries[columnIndex];
+        
+        // Remove previous highlight
+        if (highlightRect) {
+          canvas.remove(highlightRect);
+        }
+        
+        // Create new highlight
+        highlightRect = new Rect({
+          left: column.start,
+          top: headerHeight,
+          width: column.width,
+          height: canvas.height! - headerHeight,
+          fill: '#1A365D',
+          opacity: 0.05,
+          selectable: false,
+          evented: false
+        });
+        
+        canvas.add(highlightRect);
+        canvas.renderAll();
+      }
+    };
+
+    const handleDragLeave = () => {
+      canvas.getElement().style.cursor = 'default';
+      if (highlightRect) {
+        canvas.remove(highlightRect);
+        canvas.renderAll();
+      }
+    };
+
     const handleDrop = (e: DragEvent) => {
       e.preventDefault();
+      canvas.getElement().style.cursor = 'default';
+      
+      if (highlightRect) {
+        canvas.remove(highlightRect);
+      }
+      
       const type = e.dataTransfer?.getData('text/plain');
       if (!type) return;
 
@@ -171,7 +290,8 @@ export const Canvas = () => {
       createTouchpointCard(type, x, y);
     };
 
-    canvas.getElement().addEventListener('dragover', (e) => e.preventDefault());
+    canvas.getElement().addEventListener('dragover', handleDragOver);
+    canvas.getElement().addEventListener('dragleave', handleDragLeave);
     canvas.getElement().addEventListener('drop', handleDrop);
 
     drawTimelineGrid();
@@ -190,7 +310,8 @@ export const Canvas = () => {
 
     return () => {
       window.removeEventListener("resize", handleResize);
-      canvas.getElement().removeEventListener('dragover', (e) => e.preventDefault());
+      canvas.getElement().removeEventListener('dragover', handleDragOver);
+      canvas.getElement().removeEventListener('dragleave', handleDragLeave);
       canvas.getElement().removeEventListener('drop', handleDrop);
       canvas.dispose();
     };
