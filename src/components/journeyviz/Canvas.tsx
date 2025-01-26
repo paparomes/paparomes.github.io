@@ -1,5 +1,14 @@
 import { useEffect, useRef } from "react";
-import { Canvas as FabricCanvas, Line, Text } from "fabric";
+import { Canvas as FabricCanvas, Line, Text, Group, Rect, IEvent } from "fabric";
+import { supabase } from "@/integrations/supabase/client";
+
+type TouchpointCard = {
+  id: string;
+  type: string;
+  icon: string;
+  left: number;
+  top: number;
+};
 
 export const Canvas = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -11,8 +20,8 @@ export const Canvas = () => {
     if (!canvasRef.current || fabricRef.current) return;
 
     const canvas = new FabricCanvas(canvasRef.current, {
-      width: window.innerWidth - 256, // Subtract sidebar width
-      height: window.innerHeight - 64, // Subtract navbar height
+      width: window.innerWidth - 256,
+      height: window.innerHeight - 64,
       backgroundColor: "#F5F8FF",
     });
 
@@ -66,6 +75,88 @@ export const Canvas = () => {
       canvas.renderAll();
     };
 
+    const createTouchpointCard = (type: string, left: number, top: number) => {
+      const cardWidth = 160;
+      const cardHeight = 80;
+      
+      // Create card background
+      const background = new Rect({
+        width: cardWidth,
+        height: cardHeight,
+        fill: 'white',
+        rx: 8,
+        ry: 8,
+        shadow: '0 2px 4px rgba(0,0,0,0.1)',
+        strokeWidth: 1,
+        stroke: '#E2E8F0'
+      });
+
+      // Create type label
+      const label = new Text(type, {
+        left: 12,
+        top: 12,
+        fontFamily: 'Inter',
+        fontSize: 14,
+        fill: '#1A365D'
+      });
+
+      // Create delete button
+      const deleteBtn = new Text('×', {
+        left: cardWidth - 24,
+        top: 8,
+        fontSize: 20,
+        fill: '#94A3B8',
+        fontFamily: 'Inter'
+      });
+
+      // Group all elements
+      const group = new Group([background, label, deleteBtn], {
+        left,
+        top,
+        subTargetCheck: true,
+        hasControls: false
+      });
+
+      // Add hover effect
+      group.on('mouseover', () => {
+        background.set('shadow', '0 4px 6px rgba(0,0,0,0.1)');
+        deleteBtn.set('fill', '#64748B');
+        canvas.renderAll();
+      });
+
+      group.on('mouseout', () => {
+        background.set('shadow', '0 2px 4px rgba(0,0,0,0.1)');
+        deleteBtn.set('fill', '#94A3B8');
+        canvas.renderAll();
+      });
+
+      // Handle delete button click
+      deleteBtn.on('mousedown', (e: IEvent) => {
+        e.stopPropagation();
+        canvas.remove(group);
+        canvas.renderAll();
+      });
+
+      canvas.add(group);
+      canvas.renderAll();
+    };
+
+    // Handle dropped touchpoints
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      const type = e.dataTransfer?.getData('text/plain');
+      if (!type) return;
+
+      const rect = canvas.getElement().getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      createTouchpointCard(type, x, y);
+    };
+
+    canvas.getElement().addEventListener('dragover', (e) => e.preventDefault());
+    canvas.getElement().addEventListener('drop', handleDrop);
+
     drawTimelineGrid();
 
     const handleResize = () => {
@@ -82,6 +173,8 @@ export const Canvas = () => {
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      canvas.getElement().removeEventListener('dragover', (e) => e.preventDefault());
+      canvas.getElement().removeEventListener('drop', handleDrop);
       canvas.dispose();
     };
   }, []);

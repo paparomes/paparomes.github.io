@@ -3,7 +3,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Globe, Mail, Phone, User, Users } from "lucide-react";
 
+const touchpointTypes = [
+  { icon: Globe, label: "Web" },
+  { icon: Mail, label: "Email" },
+  { icon: Phone, label: "Phone" },
+  { icon: User, label: "In-person" },
+];
+
 export const Sidebar = () => {
+  const handleDragStart = (e: React.DragEvent, type: string) => {
+    e.dataTransfer.setData('text/plain', type);
+  };
+
   return (
     <div className="flex w-64 flex-col border-r border-navy-light/10 bg-white">
       <ScrollArea className="flex-1 p-4">
@@ -28,22 +39,18 @@ export const Sidebar = () => {
           <div>
             <h2 className="mb-2 text-sm font-semibold text-navy">Touchpoint Types</h2>
             <div className="space-y-2">
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Globe className="h-4 w-4" />
-                Web
-              </Button>
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Mail className="h-4 w-4" />
-                Email
-              </Button>
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <Phone className="h-4 w-4" />
-                Phone
-              </Button>
-              <Button variant="ghost" className="w-full justify-start gap-2">
-                <User className="h-4 w-4" />
-                In-person
-              </Button>
+              {touchpointTypes.map(({ icon: Icon, label }) => (
+                <Button
+                  key={label}
+                  variant="ghost"
+                  className="w-full justify-start gap-2 cursor-grab active:cursor-grabbing"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, label)}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </Button>
+              ))}
             </div>
           </div>
           
